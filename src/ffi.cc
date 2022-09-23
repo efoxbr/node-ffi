@@ -47,15 +47,17 @@ NAN_MODULE_INIT(FFI::InitializeBindings) {
   Nan::Set(target, Nan::New<String>("version").ToLocalChecked(),
     Nan::New<String>(PACKAGE_VERSION).ToLocalChecked());
 
+  auto context = v8::Isolate::GetCurrent()->GetCurrentContext();
+
   // main function exports
   Nan::Set(target, Nan::New<String>("ffi_prep_cif").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(FFIPrepCif)).ToLocalChecked());
+    Nan::New<FunctionTemplate>(FFIPrepCif)->GetFunction(context).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("ffi_prep_cif_var").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(FFIPrepCifVar)).ToLocalChecked());
+    Nan::New<FunctionTemplate>(FFIPrepCifVar)->GetFunction(context).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("ffi_call").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(FFICall)).ToLocalChecked());
+    Nan::New<FunctionTemplate>(FFICall)->GetFunction(context).ToLocalChecked());
   Nan::Set(target, Nan::New<String>("ffi_call_async").ToLocalChecked(),
-    Nan::GetFunction(Nan::New<FunctionTemplate>(FFICallAsync)).ToLocalChecked());
+    Nan::New<FunctionTemplate>(FFICallAsync)->GetFunction(context).ToLocalChecked());
 
   // `ffi_status` enum values
   SET_ENUM_VALUE(FFI_OK);
@@ -190,11 +192,13 @@ NAN_METHOD(FFI::FFIPrepCif) {
     return THROW_ERROR_EXCEPTION("prepCif(): Buffer required as first arg");
   }
 
+  auto context = v8::Isolate::GetCurrent()->GetCurrentContext();
+
   cif = Buffer::Data(cif_buf.As<Object>());
-  nargs = info[1]->Uint32Value();
-  rtype = Buffer::Data(info[2]->ToObject());
-  atypes = Buffer::Data(info[3]->ToObject());
-  abi = (ffi_abi)info[4]->Uint32Value();
+  nargs = info[1]->Uint32Value(context).ToChecked();
+  rtype = Buffer::Data(info[2]->ToObject(context).ToLocalChecked());
+  atypes = Buffer::Data(info[3]->ToObject(context).ToLocalChecked());
+  abi = (ffi_abi)info[4]->Uint32Value(context).ToChecked();
 
   status = ffi_prep_cif(
       (ffi_cif *)cif,
@@ -235,11 +239,13 @@ NAN_METHOD(FFI::FFIPrepCifVar) {
   }
 
   cif = Buffer::Data(cif_buf.As<Object>());
-  fargs = info[1]->Uint32Value();
-  targs = info[2]->Uint32Value();
-  rtype = Buffer::Data(info[3]->ToObject());
-  atypes = Buffer::Data(info[4]->ToObject());
-  abi = (ffi_abi)info[5]->Uint32Value();
+
+  auto context = v8::Isolate::GetCurrent()->GetCurrentContext();
+  fargs = info[1]->Uint32Value(context).ToChecked();
+  targs = info[2]->Uint32Value(context).ToChecked();
+  rtype = Buffer::Data(info[3]->ToObject(context).ToLocalChecked());
+  atypes = Buffer::Data(info[4]->ToObject(context).ToLocalChecked());
+  abi = (ffi_abi)info[5]->Uint32Value(context).ToChecked();
 
   status = ffi_prep_cif_var(
       (ffi_cif *)cif,
@@ -266,10 +272,11 @@ NAN_METHOD(FFI::FFICall) {
     return THROW_ERROR_EXCEPTION("ffi_call() requires 4 arguments!");
   }
 
-  char *cif = Buffer::Data(info[0]->ToObject());
-  char *fn = Buffer::Data(info[1]->ToObject());
-  char *res = Buffer::Data(info[2]->ToObject());
-  char *fnargs = Buffer::Data(info[3]->ToObject());
+  auto context = v8::Isolate::GetCurrent()->GetCurrentContext();
+  char *cif = Buffer::Data(info[0]->ToObject(context).ToLocalChecked());
+  char *fn = Buffer::Data(info[1]->ToObject(context).ToLocalChecked());
+  char *res = Buffer::Data(info[2]->ToObject(context).ToLocalChecked());
+  char *fnargs = Buffer::Data(info[3]->ToObject(context).ToLocalChecked());
 
 #if __OBJC__ || __OBJC2__
     @try {
@@ -308,10 +315,11 @@ NAN_METHOD(FFI::FFICallAsync) {
   p->result = FFI_OK;
 
   // store a persistent references to all the Buffers and the callback function
-  p->cif = Buffer::Data(info[0]->ToObject());
-  p->fn = Buffer::Data(info[1]->ToObject());
-  p->res = Buffer::Data(info[2]->ToObject());
-  p->argv = Buffer::Data(info[3]->ToObject());
+  auto context = v8::Isolate::GetCurrent()->GetCurrentContext();
+  p->cif = Buffer::Data(info[0]->ToObject(context).ToLocalChecked());
+  p->fn = Buffer::Data(info[1]->ToObject(context).ToLocalChecked());
+  p->res = Buffer::Data(info[2]->ToObject(context).ToLocalChecked());
+  p->argv = Buffer::Data(info[3]->ToObject(context).ToLocalChecked());
 
   Local<Function> callback = Local<Function>::Cast(info[4]);
   p->callback = new Nan::Callback(callback);
